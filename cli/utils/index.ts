@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import fsExtra from 'fs-extra'
+import { replaceTemplate, Variable } from './replaceTemplate'
 
 export const handlePath = (
   filePath: string,
@@ -27,23 +28,26 @@ export const copyTemplate = (src: string, dest: string, basePath?: string) => {
   }
 }
 
-export const updatePackageJson = (
-  projectName: string,
-  projectDir: string,
+export const updateFileContent = (
+  filePath: string,
+  replacements: Variable[],
   basePath?: string
 ) => {
-  const packageJsonPath = handlePath(`${projectDir}/package.json`, basePath)
-  if (!fs.existsSync(packageJsonPath)) {
-    console.error(`Package.json not found at ${packageJsonPath}`)
-    return
-  }
   try {
-    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
-    const packageJsonData = JSON.parse(packageJsonContent)
-    packageJsonData.name = projectName
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonData, null, 2))
+    const fileDir = handlePath(filePath, basePath)
+
+    if (!fs.existsSync(fileDir)) {
+      throw new Error(`File not found: ${fileDir}`)
+    }
+
+    let fileContent = fs.readFileSync(fileDir, 'utf-8')
+
+    fileContent = replaceTemplate(fileContent, replacements)
+
+    fs.writeFileSync(fileDir, fileContent)
+    console.log(`Updated file: ${fileDir}`)
   } catch (error) {
-    console.error('Error updating package.json:', error)
+    console.error('Error updating file content:', error)
   }
 }
 

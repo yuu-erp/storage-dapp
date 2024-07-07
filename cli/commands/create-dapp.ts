@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import inquirer from 'inquirer'
-import { copyTemplate, createDirectory, updatePackageJson } from '../utils'
+import { copyTemplate, createDirectory, updateFileContent } from '../utils'
 
 export default (program: Command) => {
   return program
@@ -39,8 +39,13 @@ export default (program: Command) => {
       createDirectory(projectDirectory, process.cwd())
       // copy existing project template
       copyTemplate(templateDirectory, projectDirectory, process.cwd())
-      // update package file name to dapp name
-      updatePackageJson(answers.name, projectDirectory, process.cwd())
+      // Update package.json with project name
+      const replacements = [
+        { replacer: '__project_name__', value: answers.name }
+      ]
+      const packageJsonPath = `${projectDirectory}/package.json`
+      updateFileContent(packageJsonPath, replacements, process.cwd())
+
       console.log(
         `Project ${answers.name} created successfully at ${projectDirectory}`
       )
