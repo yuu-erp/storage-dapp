@@ -16,6 +16,10 @@ export default (program: Command) => {
             {
               name: 'ReactJs',
               value: 'reactjs'
+            },
+            {
+              name: 'NextJS',
+              value: 'nextjs'
             }
           ]
         },
@@ -25,10 +29,20 @@ export default (program: Command) => {
           name: 'name'
         }
       ])
-      const scraperDirectory = `./apps/${answers.name}/` // Create a directory named after the scraper name
-      createDirectory(scraperDirectory, process.cwd()) // Ensure the directory is created
-      const templateDirectory = `./cli/templates/react-template` // Path to your react template folder
-      copyTemplate(templateDirectory, scraperDirectory, process.cwd()) // Copy the template to the new project directory
-      updatePackageJson(answers.name, scraperDirectory, process.cwd())
+      if (answers.type === 'nextjs') {
+        console.log('NextJS is not supported yet.')
+        return
+      }
+      const projectDirectory = `./apps/${answers.name}/`
+      const templateDirectory = `./cli/templates/react-template`
+      // create dapp directory
+      createDirectory(projectDirectory, process.cwd())
+      // copy existing project template
+      copyTemplate(templateDirectory, projectDirectory, process.cwd())
+      // update package file name to dapp name
+      updatePackageJson(answers.name, projectDirectory, process.cwd())
+      console.log(
+        `Project ${answers.name} created successfully at ${projectDirectory}`
+      )
     })
 }

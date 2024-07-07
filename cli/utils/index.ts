@@ -41,9 +41,7 @@ export const updatePackageJson = (
     const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8')
     const packageJsonData = JSON.parse(packageJsonContent)
     packageJsonData.name = projectName
-    // Write back to package.json
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonData, null, 2))
-    console.log(`Updated package.json with name: ${projectName}`)
   } catch (error) {
     console.error('Error updating package.json:', error)
   }
