@@ -5,7 +5,7 @@ import { replaceTemplate, Variable } from './replaceTemplate'
 
 export const handlePath = (
   filePath: string,
-  baseUrl: string = path.resolve(process.cwd(), './build/src')
+  baseUrl: string = path.resolve(process.cwd(), './_buildCli')
 ) => path.join(baseUrl, filePath)
 
 export const createDirectory = (dirPath: string, basePath?: string) => {
@@ -45,7 +45,6 @@ export const updateFileContent = (
     fileContent = replaceTemplate(fileContent, replacements)
 
     fs.writeFileSync(fileDir, fileContent)
-    console.log(`Updated file: ${fileDir}`)
   } catch (error) {
     console.error('Error updating file content:', error)
   }

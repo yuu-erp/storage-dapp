@@ -22,10 +22,12 @@
   },
   "exclude": [
     "cli/templates/*",
+    "apps/**/*",
     "node_modules",
     "./node_modules",
     "./node_modules/*",
     "./node_modules/@types/node/index.d.ts"
   ],
-  "include": ["cli/**/*"]
+  "files": ["types/index.d.ts"], // Các file dùng để defined global type cho dự án
+  "include": ["cli/**/*", "core/**/*", "package/**/*", "apps/**/*"]
 }

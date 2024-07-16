@@ -5,8 +5,8 @@ import { handlePath } from './utils'
 const program = new Command()
 
 program
-  .name('kaguli')
-  .description('CLI for Kaguya scraper utilities')
+  .name('MetaNode')
+  .description('CLI for dapp repository utility')
   .version('1.0.0')
 
 const commandFiles = fs
