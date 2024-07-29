@@ -12,8 +12,8 @@ export default ({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        '@package': path.resolve(__dirname, '../../package')
-        // '@core': path.resolve(__dirname, '../../core')
+        '@package': path.resolve(__dirname, '../../package'),
+        '@core': path.resolve(__dirname, '../../core')
       }
     },
     server: {

@@ -1,6 +1,6 @@
-import EventEmitter from './EventEmitter'
-import { SystemNotReadyError } from './errors'
-import { receiveData } from './receiveData'
+import EventEmitter from '../core/EventEmitter'
+import { SystemNotReadyError } from '../core/errors'
+import { receiveData } from '../core/receiveData'
 
 const exceptionNoTimeout: Array<keyof typeof receiveData> = [
   'scanQR',
@@ -14,7 +14,7 @@ class SystemCore extends EventEmitter {
   constructor() {
     super()
     this._isReady = this.checkSystemReady()
-    this._subscribe()
+    this.subscribeEvents()
   }
 
   get isReady(): boolean {
@@ -216,24 +216,22 @@ class SystemCore extends EventEmitter {
     }
   }
 
-  private _subscribe(): void {
+  private subscribeEvents(): void {
     window.addEventListener('flutterInAppWebViewPlatformReady', () => {
       this._isReady = true
       this.emit('ready')
     })
 
-    window
-      .require?.('electron')
-      ?.ipcRenderer.on('message', (_event, ...args) => {
-        if (args[0]) {
-          window.postMessage(args[0], '*')
-        } else {
-          window.postMessage(args, '*')
-        }
+    const electron = window.require?.('electron')
+    if (electron) {
+      electron.ipcRenderer.on('message', (_event, ...args) => {
+        const message = args[0] || args
+        window.postMessage(message, '*')
       })
+    }
 
-    window.addEventListener('message', (ev) => {
-      const { data } = ev
+    window.addEventListener('message', (event: MessageEvent) => {
+      const { data } = event
 
       if (typeof data === 'string') {
         if (data.startsWith('backWorker|')) {

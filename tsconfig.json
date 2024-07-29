@@ -29,5 +29,11 @@
     "./node_modules/@types/node/index.d.ts"
   ],
   "files": ["types/index.d.ts"], // Các file dùng để defined global type cho dự án
-  "include": ["cli/**/*", "core/**/*", "package/**/*", "apps/**/*"]
+  "include": [
+    "cli/**/*",
+    "core/**/*",
+    "package/**/*",
+    "apps/**/*",
+    "test/SystemCore.ts"
+  ]
 }

@@ -1,13 +1,8 @@
 import { receiveData } from '../core/receiveData'
 declare global {
   interface Window {
-    lang: any
-    webkit: any
-    appId: any
-  }
-  interface CustomWindow extends Window {
-    webkit?: {
-      messageHandlers?: {
+    webkit: {
+      messageHandlers: {
         callbackHandler: any
       }
     }
