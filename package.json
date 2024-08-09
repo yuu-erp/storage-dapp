@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "workspaces": ["package/*", "apps/*"],
   "scripts": {
     "build": "tsc -p tsconfig.release.json",
     "lint": "eslint .",

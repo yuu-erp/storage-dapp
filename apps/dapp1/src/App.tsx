@@ -5,6 +5,7 @@ import React, { useEffect } from 'react'
 
 export default function App() {
   const { isReady } = useReady()
+  
   const getAllWallet = async () => {
     try {
       const data = await getAllWallets()
@@ -13,9 +14,11 @@ export default function App() {
       console.log('getAllWallet - error: ', error)
     }
   }
+
   useEffect(() => {
     getAllWallet()
   }, [])
+
   return isReady ? (
     <React.Fragment>
       <div style={{ width: '100vw', height: '100vh', background: 'white' }}>

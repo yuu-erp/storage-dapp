@@ -34,6 +34,5 @@
     "core/**/*",
     "package/**/*",
     "apps/**/*",
-    "test/SystemCore.ts"
   ]
 }

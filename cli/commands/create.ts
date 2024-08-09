@@ -2,10 +2,9 @@ import { Command } from 'commander'
 import inquirer from 'inquirer'
 import ora from 'ora'
 import { copyTemplate, createDirectory, updateFileContent } from '../utils'
-
 export default (program: Command) => {
   return program
-    .command('create-dapp')
+    .command('create')
     .description('Create Metanode project.')
     .action(async () => {
       const answers = await inquirer.prompt([

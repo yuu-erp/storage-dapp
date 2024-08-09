@@ -13,7 +13,7 @@ export default function ErrorReady() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          color: '#fff',
+          color: '#000',
           fontSize: '24px',
           textAlign: 'center'
         }}
