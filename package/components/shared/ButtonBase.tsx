@@ -2,7 +2,7 @@ import classNames from 'classnames'
 import React from 'react'
 import { AiOutlineLoading3Quarters } from 'react-icons/ai'
 
-export interface BaseButtonProps
+export interface ButtonBaseProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
   LeftIcon?: React.ComponentType<{ className: string }>
   RightIcon?: React.ComponentType<{ className: string }>
@@ -14,7 +14,7 @@ export interface BaseButtonProps
   isLoading?: boolean
 }
 
-const BaseButton = React.forwardRef<HTMLButtonElement, BaseButtonProps>(
+const ButtonBase = React.forwardRef<HTMLButtonElement, ButtonBaseProps>(
   (props, ref) => {
     const {
       LeftIcon,
@@ -56,5 +56,5 @@ const BaseButton = React.forwardRef<HTMLButtonElement, BaseButtonProps>(
   }
 )
 
-BaseButton.displayName = 'BaseButton'
-export default React.memo(BaseButton)
+ButtonBase.displayName = 'ButtonBase'
+export default React.memo(ButtonBase)

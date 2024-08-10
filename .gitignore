@@ -1,2 +1,4 @@
-node_modules/
 _buildCli/
+
+**/dist/
+**/node_modules/
