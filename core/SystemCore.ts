@@ -1,258 +1,266 @@
-import EventEmitter from '../core/EventEmitter'
-import { SystemNotReadyError } from '../core/errors'
-import { receiveData } from '../core/receiveData'
+import EventEmitter from './EventEmitter'
+import { receiveData } from './receiveData'
 
-const exceptionNoTimeout: Array<keyof typeof receiveData> = [
-  'scanQR',
-  'exitApp'
-]
+interface DataResponse {
+  success?: boolean
+  granted?: boolean | number
+  data?: any
+  message?: any
+  code?: string | number
+}
+
+function sendLargeData(command: string, data: string) {
+  const chunkSize = 64000 // 64KB
+  const totalChunks = Math.ceil(data.length / chunkSize)
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = data.slice(i * chunkSize, (i + 1) * chunkSize)
+    const message = {
+      type: 'large',
+      chunk,
+      index: i,
+      totalChunks,
+      command
+    }
+    window.parent.postMessage(message, '*') // Replace '*' with appropriate target origin
+  }
+}
+
+function sendNormalData(data: any) {
+  const message = {
+    type: 'normal',
+    data
+  }
+  window.parent.postMessage(message, '*') // Replace '*' with appropriate target origin
+}
+
+async function sendMessageToNative(
+  message: { command: string },
+  isFrame: boolean
+): Promise<{ data: any }> {
+  try {
+    if (pendingCommands.has(message.command.toString())) {
+      console.warn(`Command "${message.command}" is already pending.`)
+      return {
+        data: `Command "${message.command}" is already pending.`
+      }
+    }
+    pendingCommands.add(message.command.toString())
+
+    return new Promise((resolve) => {
+      if (isFrame) {
+        const msg = JSON.stringify(message)
+        if (msg.length > 64000) {
+          sendLargeData(message.command, msg)
+        } else {
+          sendNormalData(msg)
+        }
+      } else if (
+        window.webkit &&
+        window.webkit.messageHandlers &&
+        window.webkit.messageHandlers.callbackHandler &&
+        typeof window.webkit.messageHandlers.callbackHandler.postMessage ===
+          'function'
+      ) {
+        window.webkit.messageHandlers.callbackHandler.postMessage(
+          JSON.stringify(message)
+        )
+      } else {
+        throw new Error('window.webkit not found')
+      }
+
+      // Store the resolve function for later use
+      receiveData[message.command] = { resolve }
+    })
+  } catch (error) {
+    throw error // Propagate the error
+  } finally {
+    // Remove the command from pendingCommands after processing
+    pendingCommands.delete(message.command.toString())
+  }
+}
+
+const pendingCommands = new Set<string>()
 
 class SystemCore extends EventEmitter {
-  private _isReady: boolean = false
-  private _hasNotch: boolean = false
+  _isReady: boolean
+  _hasNotch: boolean
+  _isFrame: boolean
 
   constructor() {
     super()
-    this._isReady = this.checkSystemReady()
-    this.subscribeEvents()
+    this._isFrame = window !== window.parent
+    this._isReady =
+      window.webkit &&
+      window.webkit.messageHandlers &&
+      window.webkit.messageHandlers.callbackHandler
+        ? true
+        : !!window.opener
+
+    if (this._isFrame) {
+      this._isReady = true // You may want to update this based on other logic
+    }
+
+    this._hasNotch = false
+    this._subscribe()
   }
 
-  get isReady(): boolean {
+  get isReady() {
     return this._isReady
   }
 
-  get hasNotch(): boolean {
+  get statusNotch() {
     return this._hasNotch
   }
 
-  set hasNotch(status: boolean) {
+  setStatusNotch(status = false) {
     this._hasNotch = status
   }
 
   async send(payload: {
-    command: keyof typeof receiveData | string
+    command: string
     value?: any
     appId?: any
-  }): Promise<any> {
-    try {
-      if (process.env.PLATFORM === 'web') {
-        throw new Error('Web platform is not supported')
+  }): Promise<DataResponse> {
+    if (process.env.platform === 'web')
+      return {
+        data: {}, // Ensure `data` is always defined
+        success: false, // Determine success
+        message: 'Platform not support'
       }
 
-      if (!this.isReady) {
-        throw new SystemNotReadyError()
-      }
-
-      if (window.webkit && window.webkit.messageHandlers) {
-        receiveData[payload.command] = -1
-
-        if (window.appId) {
-          payload.appId = window.appId
-        }
-
-        const res = await this.sendMessageToNative(payload)
-
-        if (res == null) {
-          return { success: false, data: null }
-        }
-
-        if (typeof res === 'string') {
-          return this.handleJsonStringMessage(res)
-        }
-
-        const command = res.command
-        const response = res.data
-
-        if (typeof response === 'undefined') {
-          throw new Error(
-            `Command did not return expected data - ${JSON.stringify(res)}`
-          )
-        }
-
-        if (response.success !== true && command !== 'getDeviceInfo') {
-          throw response
-        }
-
-        return res.data
-      }
-
-      return await this.postMessageToWindow(payload)
-    } catch (error) {
-      console.error('Error in send method:', error)
-      throw error
+    if (!this.isReady) {
+      throw new Error('System is not ready')
     }
-  }
 
-  async exit(): Promise<void> {
-    // Implement exit functionality if needed
-  }
+    if ((window.webkit && window.webkit.messageHandlers) || this._isFrame) {
+      receiveData[payload.command] = -1
+      if (window?.appId) {
+        payload.appId = window.appId
+      }
 
-  private checkSystemReady(): boolean {
+      const res: DataResponse = (await sendMessageToNative(
+        payload,
+        this._isFrame
+      )) || { data: { success: true }, success: true } // Fallback
+      return {
+        data: res.data || null, // Ensure `data` is always defined
+        success: res.success === true, // Determine success
+        message: res.message || '', // Ensure `message` is always defined
+        code: res.code || '' // Ensure `code` is always defined
+      }
+    }
+
     return (
-      (window.webkit &&
-        window.webkit.messageHandlers &&
-        typeof window.webkit.messageHandlers.callbackHandler?.postMessage ===
-          'function') ||
-      !!window.opener
+      (await this._postMessageToWindow(payload)) || { data: {}, success: false }
     )
   }
 
-  private async sendMessageToNative(message: any): Promise<any> {
-    try {
-      if (typeof receiveData[message.command] !== 'undefined') {
-        receiveData[message.command] = 0
+  async exit() {
+    // Implement your exit logic here
+  }
+
+  _postMessageToWindow(
+    message: keyof typeof receiveData | {}
+  ): Promise<{ data: any; success: boolean }> {
+    return new Promise((resolve, reject) => {
+      try {
+        const handleReceivedResponse = (res: any) => {
+          resolve(res)
+          this.removeEventListener(handleReceivedResponse)
+        }
+
+        this.on(handleReceivedResponse.bind(this))
+        window.opener?.postMessage(message, '*')
+      } catch (error) {
+        reject(error)
       }
-
-      this.postMessageToCallbackHandler(JSON.stringify(message))
-      await this.waitUntil(message.command)
-
-      return receiveData[message.command]
-    } catch (error) {
-      console.error('Error sending message to native:', error)
-      throw error
-    }
-  }
-
-  private postMessageToCallbackHandler(message: string): void {
-    if (
-      window.webkit &&
-      window.webkit.messageHandlers &&
-      window.webkit.messageHandlers.callbackHandler &&
-      typeof window.webkit.messageHandlers.callbackHandler.postMessage ===
-        'function'
-    ) {
-      window.webkit.messageHandlers.callbackHandler.postMessage(message)
-    } else {
-      console.warn(
-        'window.webkit.messageHandlers.callbackHandler.postMessage is not available'
-      )
-    }
-  }
-
-  private async waitUntil(command: keyof typeof receiveData): Promise<void> {
-    let timeout = 0
-
-    if (exceptionNoTimeout.includes(command)) {
-      return await new Promise<void>((resolve) => {
-        const interval = setInterval(() => {
-          if (typeof receiveData[command] !== 'number') {
-            resolve()
-            clearInterval(interval)
-          }
-        }, 200)
-      })
-    }
-
-    return await new Promise<void>((resolve, reject) => {
-      const interval = setInterval(() => {
-        if (typeof receiveData[command] !== 'number') {
-          timeout = 0
-          resolve()
-          clearInterval(interval)
-        }
-
-        if (timeout === 15000 && command !== 'connect-wallet') {
-          clearInterval(interval)
-          timeout = 0
-          reject(new Error('Timeout: no response received'))
-        }
-
-        timeout += 200
-      }, 200)
     })
   }
 
-  private async postMessageToWindow(
-    message: keyof typeof receiveData | {}
-  ): Promise<{ data: any; success: boolean }> {
-    return await new Promise<{ data: any; success: boolean }>(
-      (resolve, reject) => {
-        try {
-          const handleReceivedResponse = (res: any) => {
-            resolve(res)
-            this.removeEventListener('receivedResponse', handleReceivedResponse)
-          }
-
-          this.on('receivedResponse', handleReceivedResponse)
-          window.opener?.postMessage(message, '*')
-        } catch (error) {
-          console.error('Error posting message to window:', error)
-          reject(error)
-        }
-      }
-    )
-  }
-
-  private handleJsonStringMessage(stringData: string, isListen?: any): any {
-    try {
-      let res = JSON.parse(stringData)
-
-      if (typeof res === 'string' && (res.includes('{') || res.includes('['))) {
-        res = JSON.parse(stringData)
-      }
-
-      const command = res.command
-      const response = res.data
-
-      if (!command && !response) {
-        return
-      }
-
-      if (response.success !== true) {
-        if (isListen) {
-          this.emit(command, res)
-        }
-        throw new Error(response.message || 'Unknown error')
-      }
-
-      if (isListen) {
-        this.emit(command, res)
-      }
-
-      return response.data
-    } catch (error) {
-      console.error('Error handling JSON string message:', error)
-      throw error
-    }
-  }
-
-  private subscribeEvents(): void {
+  _subscribe() {
     window.addEventListener('flutterInAppWebViewPlatformReady', () => {
       this._isReady = true
       this.emit('ready')
     })
 
-    const electron = window.require?.('electron')
-    if (electron) {
-      electron.ipcRenderer.on('message', (_event, ...args) => {
-        const message = args[0] || args
-        window.postMessage(message, '*')
+    window
+      .require?.('electron')
+      ?.ipcRenderer.on('message', (_event: any, ...args: any[]) => {
+        if (args[0]) {
+          window.postMessage(args[0], '*')
+        } else {
+          window.postMessage(args, '*')
+        }
       })
-    }
 
-    window.addEventListener('message', (event: MessageEvent) => {
-      const { data } = event
-
-      if (typeof data === 'string') {
-        if (data.startsWith('backWorker|')) {
+    window.addEventListener('message', (ev) => {
+      try {
+        const { data } = ev
+        console.log('receiveData --> ', typeof data, data)
+        if (typeof data === 'string') {
+          if (data.startsWith('backWorker|')) {
+            return
+          }
+          return this._handleJsonStringMessage(data, true)
+        }
+        if (data.cmd) {
+          this.emit('listen-cmd', data)
           return
         }
-        return this.handleJsonStringMessage(data, true)
+        if (!data.isSocket) {
+          if (data.command) {
+            const messageSending = receiveData[data.command]
+            if (
+              messageSending &&
+              typeof messageSending.resolve === 'function'
+            ) {
+              messageSending.resolve(data.data)
+              pendingCommands.delete(data.command)
+            }
+            return
+          }
+        }
+        this.emit(data.command, data.data)
+      } catch (error) {
+        throw error
       }
-
-      if (data.cmd) {
-        this.emit('listen-cmd', data)
-        return
-      }
-
-      if (data.isSocket !== true) {
-        receiveData[data.command] = data
-        return data
-      }
-
-      this.emit(data.command, data.data)
-      return data
     })
+  }
+
+  _handleJsonStringMessage(stringData: any, isListen?: any) {
+    if (!stringData) {
+      return
+    }
+    try {
+      let res = stringData
+      if (
+        typeof res === 'string' &&
+        (res.indexOf('{') > -1 || res.indexOf('[') > -1)
+      ) {
+        res = JSON.parse(stringData)
+      }
+
+      const command = res.command
+      const response = res.data
+      if (!command && !response) return
+
+      if (response.success !== true) {
+        if (isListen) {
+          this.emit(command, res)
+        }
+        throw new Error(response.message)
+      }
+      if (isListen) {
+        this.emit(command, res)
+      }
+      receiveData[command].resolve(res)
+      pendingCommands.delete(command)
+      return res.data
+    } catch (err) {
+      console.error('Error handling JSON string message: ', err)
+      throw err
+    }
   }
 }
 

@@ -1,11 +1,16 @@
+import { receiveData } from './receiveData'
+
 export default class EventEmitter {
-  private _listeners: Record<string, Function[]>
+  _listeners: any
 
   constructor() {
     this._listeners = {}
+    this.on = this.on.bind(this)
+    this.removeEventListener = this.removeEventListener.bind(this)
+    this.emit = this.emit.bind(this)
   }
 
-  on(event: string, listener: Function): this {
+  on(event: keyof typeof receiveData | any, listener?: any) {
     if (!this._listeners[event]) {
       this._listeners[event] = []
     }
@@ -13,21 +18,23 @@ export default class EventEmitter {
     return this
   }
 
-  removeEventListener(event: string, listener: Function): void {
-    const listeners = this._listeners[event]
-    if (listeners) {
-      this._listeners[event] = listeners.filter((cb) => cb !== listener)
+  removeEventListener(event?: any, listener?: any) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(
+        (l: any) => l !== listener
+      )
+    }
+  }
+  removeAllEventListeners(event: any) {
+    if (this._listeners[event]) {
+      delete this._listeners[event]
     }
   }
 
-  removeAllEventListeners(event: string): void {
-    delete this._listeners[event]
-  }
-
-  emit(event: string, ...args: any[]): void {
-    const listeners = this._listeners[event]
-    if (listeners) {
-      listeners.forEach((cb) => cb(...args))
+  emit(event: any, ...args: any) {
+    const cbs = this._listeners[event]
+    if (cbs) {
+      cbs.forEach((cb: any) => cb(...args))
     }
   }
 }

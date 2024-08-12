@@ -68,6 +68,24 @@ export const writeFile = (
   fs.writeFileSync(fileDir, data, { flag: 'w' })
 }
 
+export const writeFileENV = (
+  filePath: string,
+  data: string,
+  basePath?: string
+) => {
+  // Resolve the complete path based on the basePath
+  const fullPath = basePath ? path.resolve(basePath, filePath) : filePath
+
+  // Ensure the parent directory exists
+  const dirPath = path.dirname(fullPath)
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true })
+  }
+
+  // Write data to the file
+  fs.writeFileSync(fullPath, data, { flag: 'w' })
+}
+
 export const readFile = (filePath: string, basePath?: string) => {
   const fileDir = handlePath(filePath, basePath)
 

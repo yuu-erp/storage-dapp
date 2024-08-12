@@ -19,20 +19,15 @@
     "strictNullChecks": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": "./",
+    "resolveJsonModule": true,
+    "baseUrl": ".",
     "paths": {
-      "core/*": ["core/*"]
-    }
+      "core/*": ["core/*"],
+      "package/*": ["package/*"],
+      "types/*": ["types/*"]
+    },
   },
-  "exclude": [
-    "cli/templates/*",
-    "apps/**/*",
-    "package/tailwind.config.js",
-    "node_modules",
-    "./node_modules",
-    "./node_modules/*",
-    "./node_modules/@types/node/index.d.ts"
-  ],
-  "files": ["types/index.d.ts"], // Các file dùng để defined global type cho dự án
-  "include": ["cli/**/*", "core/**/*", "package/**/*"]
+  "exclude": [],
+  "files": ["../types/index.d.ts"], // Các file dùng để defined global type cho dự án
+  "include": ["core/*"] // Các file chứa code TypeScript cần compile
 }
